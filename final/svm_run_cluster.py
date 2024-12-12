@@ -61,15 +61,17 @@ def pre_process_images_large(data_directory):
 # Prepare training data
 
 X_large, y_large = pre_process_images_large('traffic_lights_large/data/')
+print('Processed data into target and feature arrays')
 
 X_train_large, X_test_large, y_train_large, y_test_large = train_test_split(X_large, y_large, test_size=0.2, random_state=42)
-
+print('Split data into training and test sets')
 
 pipe_svc = make_pipeline([
     ('scaler', StandardScaler()),  # Feature scaling
     ('svc', SVC())                 # Support Vector Classifier
 ])
 
+print('Beginning hyperparameter optimization')
 # defining parameter range 
 param_grid = {'C': [0.1, 1, 10, 100, 1000],  
               'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
@@ -80,6 +82,7 @@ grid_search = GridSearchCV(SVC(), param_grid, cv=5, verbose=3, n_jobs=-1)
   
 # fitting the model for grid search 
 grid_search.fit(X_train_large, y_train_large) 
+print('Finished hyperparameter optimization')
 
 # Get the best estimator from the grid search (this will be the model with optimal hyperparameters)
 best_model_large = grid_search.best_estimator_
@@ -92,6 +95,7 @@ print(f'Final accuracy on test set: {accuracy}')
 
 
 ## Plot learning curve with optimal hyperparameters
+print('Plotting learning curve with optimal hyperparameters')
 
 pipe_svc = make_pipeline(StandardScaler(), SVC(kernel="linear", C=1.0))
                                            
@@ -102,8 +106,6 @@ train_sizes, train_scores, test_scores =\
                                train_sizes=np.linspace(0.1, 1.0, 10),
                                cv=10,
                                n_jobs=-1)
-
-#print(train_sizes)
 
 train_mean = np.mean(train_scores, axis=1)
 train_std = np.std(train_scores, axis=1)
@@ -140,6 +142,8 @@ plt.savefig('learning_curve_large.png', dpi=1000)
 
 ## Create confusion matrix
 
+print('Creating confusion matrix')
+
 y_pred_large = best_model.predict(X_test_large)
 confmat_large = confusion_matrix(y_test_large, y_pred_large)
 
@@ -155,6 +159,8 @@ plt.savefig('conf_matrix_large.png', dpi=1000)
 labels = ['red', 'yellow', 'green']
 print(classification_report(y_pred=y_pred_large, y_true=y_test_large))
 
+print('Saving model as .pkl file')
+
 # Save model as .pkl file
 
 if not os.path.exists('models'):
@@ -162,3 +168,5 @@ if not os.path.exists('models'):
 
 with open('models/svm_model_large.pkl', 'wb') as f:
     pickle.dump(best_model_large, f)
+
+print('Program executed')
