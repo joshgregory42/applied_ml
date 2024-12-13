@@ -66,38 +66,21 @@ print('Processed data into target and feature arrays')
 X_train_large, X_test_large, y_train_large, y_test_large = train_test_split(X_large, y_large, test_size=0.2, random_state=42)
 print('Split data into training and test sets')
 
-pipe_svc = make_pipeline([
-    ('scaler', StandardScaler()),  # Feature scaling
-    ('svc', SVC())                 # Support Vector Classifier
-])
+best_model_large = make_pipeline(
+    StandardScaler(),
+    SVC(C=0.1, gamma=1, kernel='linear')
+)
 
-print('Beginning hyperparameter optimization')
-# defining parameter range 
-param_grid = {'C': [0.1, 1, 10, 100, 1000],  
-              'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
-              'kernel': ['rbf', 'linear']}  
-  
-# param_grid = {'C': [0.1, 1, 10, 100, 1000],}     
-grid_search = GridSearchCV(SVC(), param_grid, cv=5, verbose=3, n_jobs=-1) 
-  
-# fitting the model for grid search 
-grid_search.fit(X_train_large, y_train_large) 
-print('Finished hyperparameter optimization')
 
-# Get the best estimator from the grid search (this will be the model with optimal hyperparameters)
-best_model_large = grid_search.best_estimator_
-
-print("Optimal hyperparameters:", grid_search.best_params_)
-
+print(f'Beginning training')
 best_model_large.fit(X_train_large, y_train_large)
+
 accuracy = best_model_large.score(X_test_large, y_test_large)
 print(f'Final accuracy on test set: {accuracy}')
 
 
 ## Plot learning curve with optimal hyperparameters
 print('Plotting learning curve with optimal hyperparameters')
-
-pipe_svc = make_pipeline(StandardScaler(), SVC(kernel="linear", C=1.0))
                                            
 train_sizes, train_scores, test_scores =\
                 learning_curve(estimator=best_model_large,
