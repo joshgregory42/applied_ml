@@ -5,10 +5,10 @@
 #SBATCH --time=24:00:00                      # Max walltime in h:m:s
 #SBATCH --partition=amilan                # Alpine testing nodes (see https://tinyurl.com/4betvt6n)
 #SBATCH --job-name=svm_large                 # job name
-#SBATCH --mail-type=END,FAIL                # Email when job ends and/or fails
+#SBATCH --mail-type=BEGIN,END,FAIL                # Email when job ends and/or fails
 #SBATCH --mail-user=jogr4852@colorado.edu   # Email address
 #SBATCH --qos=normal                           # QOS (see https://tinyurl.com/4betvt6n)
-#SBATCH --output=./output/svm_test.out	    # Output file name
+#SBATCH --output=./output/svm_train.out	    # Output file name
 
 
 # Written by:	Shelley Knuth, 24 February 2014
@@ -30,4 +30,4 @@ conda deactivate
 conda activate applied_ml
 
 
-python3 svm_run_cluster.py
+python3 svm_train_cluster.py
