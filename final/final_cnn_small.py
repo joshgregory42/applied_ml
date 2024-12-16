@@ -9,6 +9,11 @@ from tensorflow.keras import layers, models, callbacks
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 from PIL import Image
+from sklearn.metrics import confusion_matrix, classification_report
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Doing experiment tracking in Weights and Biases, which is the same that I'm using for my thesis. Trying to use this to get some experience using it
 import wandb
@@ -65,52 +70,46 @@ def pre_process_images(data_directory):
     return features, labels
 
 
-def create_base_cnn(input_shape=(32, 32, 3), num_classes=3):
+def create_cnn(input_shape=(32, 32, 3), num_classes=3):
     model = models.Sequential([
 
+        layers.InputLayer(input_shape=input_shape, name='input_layer'),
+
+        # Data augmentation steps to prevent overfitting
+        layers.RandomFlip('horizontal', name='horiz_flip'),
+        layers.RandomFlip('vertical', name='vert_flip'),
+        layers.RandomRotation(0.1, name='random_rotation'),
+        layers.RandomZoom(0.1, name='random_zoom'),
+
+        # CNN implementation
         # First convolutional layer
         layers.Conv2D(filters=32, kernel_size=(5, 5), strides=(1, 1), padding='same', data_format='channels_last', name='conv_1', activation='relu'
         ),
         
         # Second convolutional layer
-        layers.Conv2D(filters=64, kernel_size=(3, 3), padding='same', data_format='channels_last', name='conv2'),
-        layers.BatchNormalization(),
-        layers.Activation('relu'),
-        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(filters=64, kernel_size=(3, 3), padding='same', data_format='channels_last', name='conv_2'),
+        layers.BatchNormalization(name='batch_norm_1'),
+        layers.MaxPooling2D((2, 2), name='max_pool_1'),
+        layers.Activation('relu', name='relu_1'),
         
         # Third convolutional layer
-        layers.Conv2D(filters=128, kernel_size=(3, 3), padding='same', data_format='channels_last', name='conv3'),
-        layers.BatchNormalization(),
-        layers.Activation('relu'),
-        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(filters=128, kernel_size=(3, 3), padding='same', data_format='channels_last', name='conv_3'),
+        layers.BatchNormalization(name='batch_norm_2'),
+        layers.MaxPooling2D((2, 2), name='max_pool_2'),
+        layers.Activation('relu', name='relu_2'),
         
         # Flatten and Fully Connected Layers
-        layers.Flatten(name='Flatten'),
-        layers.Dense(256, activation='relu'),
-        layers.Dropout(0.5),
-        layers.Dense(num_classes, activation='softmax')
+        layers.Flatten(name='flatten'),
+        layers.Dense(256, activation='relu', name='dense_1'),
+        layers.Dropout(0.5, name='dropout_1'),
+        layers.Dense(num_classes, activation='softmax', name='output_layer')
+
     ])
 
     return model
     
 
 def train_model(X_train, y_train, X_test, y_test):
-
-    # Data augmentation to prevent overfitting
-    data_augmentation = models.Sequential([
-        layers.RandomFlip('horizontal'),
-        layers.RandomFlip('vertical'),
-        layers.RandomRotation(0.1),
-        layers.RandomZoom(0.1),
-    ])
-
-    # Create base model without data autmentation
-    model = create_base_cnn()
-
-    model = models.Sequential([
-        data_augmentation,
-        model
-    ])
 
     early_stopping = callbacks.EarlyStopping(
         monitor='val_loss',
@@ -125,6 +124,7 @@ def train_model(X_train, y_train, X_test, y_test):
         min_lr=0.001
     )
 
+    model = create_cnn()
     
     model.compile(optimizer=tf.keras.optimizers.Adam(),
               loss=tf.keras.losses.SparseCategoricalCrossentropy(),
@@ -135,8 +135,8 @@ def train_model(X_train, y_train, X_test, y_test):
     history = model.fit(
         X_train, y_train,
         validation_data=(X_test, y_test),
-        epochs=50,
-        batch_size=32,
+        epochs=1000,
+        batch_size=512,
         callbacks=[early_stopping, reduce_lr, WandbMetricsLogger()]
     )
 
@@ -145,14 +145,35 @@ def train_model(X_train, y_train, X_test, y_test):
 
 def main():
     
-    # Example of generating random input data for testing
-    import numpy as np
-    
     X, y = pre_process_images('traffic_light_images_shah/data/') 
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    train_model(X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test)
+    # print(f"X_train shape: {X_train.shape}")
+    # print(f"X_test shape: {X_test.shape}")
+    # print(f"y_train shape: {y_train.shape}")
+    # print(f"y_test shape: {y_test.shape}")
+
+    model = train_model(X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test)
+
+    # Save model in .h5 format
+    model.save('models/cnn_small.keras')
+
+    # Predict on the test set
+    y_pred = np.argmax(model.predict(X_test), axis=1)
+
+    confmat = confusion_matrix(y_test, y_pred)
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(confmat, annot=True, fmt='d', cmap='Greens', xticklabels=np.unique(['red', 'yellow', 'green']), yticklabels=np.unique(['red', 'yellow', 'green']))
+    plt.xlabel('Predicted Labels')
+    plt.ylabel('True Labels')
+    plt.title('CNN Confusion Matrix (Small Dataset)')
+    plt.savefig('cnn_conf_mat_small.png', dpi=1000)
+
+    labels = ['red', 'yellow', 'green']
+    print(classification_report(y_pred=y_pred, y_true=y_test))
+    # plt.show()
 
 if __name__ == "__main__":
     main()
