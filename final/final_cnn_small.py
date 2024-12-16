@@ -6,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras import layers, models, callbacks
+from tensorflow.keras.utils import plot_model
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 from PIL import Image
@@ -13,6 +14,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import sys
 import seaborn as sns
 
 # Doing experiment tracking in Weights and Biases, which is the same that I'm using for my thesis. Trying to use this to get some experience using it
@@ -73,6 +75,7 @@ def pre_process_images(data_directory):
 def create_cnn(input_shape=(32, 32, 3), num_classes=3):
     model = models.Sequential([
 
+        # Input layer
         layers.InputLayer(input_shape=input_shape, name='input_layer'),
 
         # Data augmentation steps to prevent overfitting
@@ -114,30 +117,25 @@ def train_model(X_train, y_train, X_test, y_test):
     early_stopping = callbacks.EarlyStopping(
         monitor='val_loss',
         restore_best_weights=True,
-        patience=5
-    )
-
-    reduce_lr = callbacks.ReduceLROnPlateau(
-        monitor='val_loss', 
-        factor=0.2,
-        patience=5, 
-        min_lr=0.001
+        patience=20
     )
 
     model = create_cnn()
     
-    model.compile(optimizer=tf.keras.optimizers.Adam(),
+    model.compile(optimizer=tf.keras.optimizers.AdamW(),
               loss=tf.keras.losses.SparseCategoricalCrossentropy(),
               metrics=['accuracy']) # same as `tf.keras.metrics.SparseCategoricalAccuracy(name='accuracy')`
 
     model.summary()
+
+    # plot_model(model, to_file='cnn_model.png', show_shapes=True, show_layer_names=True, dpi=1000)
 
     history = model.fit(
         X_train, y_train,
         validation_data=(X_test, y_test),
         epochs=1000,
         batch_size=512,
-        callbacks=[early_stopping, reduce_lr, WandbMetricsLogger()]
+        callbacks=[early_stopping, WandbMetricsLogger()]
     )
 
     return model
@@ -169,7 +167,7 @@ def main():
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
     plt.title('CNN Confusion Matrix (Small Dataset)')
-    plt.savefig('cnn_conf_mat_small.png', dpi=1000)
+    plt.savefig('final/images/cnn_conf_mat_small.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']
     print(classification_report(y_pred=y_pred, y_true=y_test))
