@@ -7610,7 +7610,7 @@ Non-trainable params: 384 (1.50 KB)</p>
 <h2 id="Model-Results----Large">Model Results -- Large<a class="anchor-link" href="#Model-Results----Large">¶</a></h2><p>I also trained an identical CNN architecture on a larger model (see the link in the SVM Jupyter notebook for the link). The script for that can be found in <code>final_cnn_large.py</code>. The overall stucture of the code is extremely similar to that of the small model, the only difference being that I don't specify specific rows and columns to crop the images to, instead just resizing them to 32x32 pixels.</p>
 <p>The confusion matrix is as follows:</p>
 <p><img alt="image" src="./images/cnn_conf_mat_large.png"/></p>
-<p>Where we can see that the model is not predicting any red lights accidentally, as is desired by the problem statement.</p>
+<p>Where we can see that the model is predicting a red lights accidentally, as is desired by the problem statement. While this is technically worse than the small dataset, I think this model would generalize better due to it's significantly larger size.</p>
 <p>The validation curves for loss and accuracy are also given as:</p>
 <p><img alt="image" src="./images/cnn_large_val_loss.png"/></p>
 <p><img alt="image" src="./images/cnn_large_val_acc.png"/></p>
