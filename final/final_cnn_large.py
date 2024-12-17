@@ -163,7 +163,7 @@ def main():
     sns.heatmap(confmat, annot=True, fmt='d', cmap='Greens', xticklabels=np.unique(['red', 'yellow', 'green']), yticklabels=np.unique(['red', 'yellow', 'green']))
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
-    plt.title('CNN Confusion Matrix (large Dataset)')
+    plt.title('CNN Confusion Matrix (Large Dataset)')
     plt.savefig('images/cnn_conf_mat_large.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']

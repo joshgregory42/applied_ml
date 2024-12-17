@@ -24,7 +24,7 @@ from wandb.integration.keras import WandbMetricsLogger
 # Also going to hyperparameter optimize using Ray Tune, again this is the same library that I'm using as in my thesis, so I'm going to use it here to get familiar with it.
 import ray
 from ray import tune
-from ray.tune import Trainable, report
+from ray.tune import Trainable
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.optuna import OptunaSearch
 
@@ -74,8 +74,7 @@ def train_model(config, input_shape=(32, 32, 3), num_classes=3):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     # Make sure the config has the right keys
-    if isinstance(config['filters'], tune.search.sample.Categorical):
-        config['filters'] = config['filters'].sample(None)
+    filters = config['filters'].value if isinstance(config['filters'], tune.search.sample.Categorical) else config['filters']
         
     model = models.Sequential([
         
@@ -134,9 +133,6 @@ def train_model(config, input_shape=(32, 32, 3), num_classes=3):
         batch_size=config['batch_size'],
         callbacks=[early_stopping, WandbMetricsLogger()]
     )
-    
-    # Report validation accuracy to ray Tune for hyperparameter optimization
-    tune.report(mean_accuracy=history.history['val_accuracy'][-1])
     
  
 def main():
@@ -231,7 +227,7 @@ def main():
     final_model.save('models/cnn_large_tuned.keras')
 
     # Predict on the test set
-    y_pred = np.argmax(model.predict(X_test), axis=1)
+    y_pred = np.argmax(final_model.predict(X_test), axis=1)
 
     confmat = confusion_matrix(y_test, y_pred)
 
@@ -239,7 +235,7 @@ def main():
     sns.heatmap(confmat, annot=True, fmt='d', cmap='Greens', xticklabels=np.unique(['red', 'yellow', 'green']), yticklabels=np.unique(['red', 'yellow', 'green']))
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
-    plt.title('CNN Confusion Matrix (large Dataset)')
+    plt.title('CNN Confusion Matrix (Large Dataset)')
     plt.savefig('images/cnn_conf_mat_large_tuned.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']
