@@ -21,8 +21,10 @@ import seaborn as sns
 import wandb
 from wandb.integration.keras import WandbMetricsLogger
 
-# Also going to hyperparameter optimize using Optuna, again this is the same library that I'm using as in my thesis, so I'm going to use it here to get familiar with it.
-import optuna
+# Also going to hyperparameter optimize using Ray Tune, again this is the same library that I'm using as in my thesis, so I'm going to use it here to get familiar with it.
+import ray
+from ray import tune
+from ray.tune import Trainable
 
 wandb.login()
 wandb.init()
@@ -71,7 +73,7 @@ def create_cnn(input_shape=(32, 32, 3), num_classes=3):
     model = models.Sequential([
 
         # Input layer
-        layers.InputLayer(input_shape=input_shape, name='input_layer'),
+        layers.InputLayer(shape=input_shape, name='input_layer'),
 
         # Data augmentation steps to prevent overfitting
         layers.RandomFlip('horizontal', name='horiz_flip'),
@@ -162,7 +164,7 @@ def main():
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
     plt.title('CNN Confusion Matrix (large Dataset)')
-    plt.savefig('final/images/cnn_conf_mat_large.png', dpi=1000)
+    plt.savefig('images/cnn_conf_mat_large.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']
     print(classification_report(y_pred=y_pred, y_true=y_test))
