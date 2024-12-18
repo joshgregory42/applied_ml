@@ -134,6 +134,10 @@ def train_model(config, input_shape=(32, 32, 3), num_classes=3):
         callbacks=[early_stopping, WandbMetricsLogger()]
     )
     
+    best_val_accuracy = max(history.history['val_accuracy'])
+    
+    ray.train.report({'accuracy': best_val_accuracy})
+    
  
 def main():
     
@@ -154,8 +158,8 @@ def main():
         max_t=1000,  # max epochs
         grace_period=10,
         reduction_factor=2,
-        metric=metric,
-        mode=mode
+        # metric=metric,
+        # mode=mode
     )
     search_alg = OptunaSearch(metric=metric, mode=mode)
 
@@ -166,12 +170,14 @@ def main():
         scheduler=scheduler,
         search_alg=search_alg,
         num_samples=20,
-        resources_per_trial={'cpu':12, 'gpu':1}
+        metric='accuracy',
+        mode='max',
+        resources_per_trial={'cpu':18, 'gpu':1}
     )
 
     # Print best hyperparameters and results
     print(f'Best hyperparameters found: {analysis.best_config}')
-    print(f'Best val. accuracy: {analysis.best_result['mean_accuracy']}')
+    print(f'Best val. accuracy: {analysis.best_result['accuracy']}')
     
     # Load data for final model
     X, y = pre_process_images('/home/josh/applied_ml/final/traffic_lights_large/data')
@@ -235,7 +241,7 @@ def main():
     sns.heatmap(confmat, annot=True, fmt='d', cmap='Greens', xticklabels=np.unique(['red', 'yellow', 'green']), yticklabels=np.unique(['red', 'yellow', 'green']))
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
-    plt.title('CNN Confusion Matrix (Large Dataset)')
+    plt.title('CNN Confusion Matrix (Large Dataset, Tuned)')
     plt.savefig('images/cnn_conf_mat_large_tuned.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']

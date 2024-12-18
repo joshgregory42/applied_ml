@@ -44,10 +44,15 @@ def pre_process_images(data_directory):
         for file in os.listdir(color_path):
             img_path = os.path.join(color_path, file)
                 
+                
             # Read in image
             img = np.array(Image.open(img_path).convert('RGB'))
 
             image_crop = np.copy(img)
+            row_crop = 7
+            col_crop = 8
+            image_crop = img[row_crop:-row_crop, col_crop:-col_crop, :]
+
             img_resized = cv2.resize(image_crop, (32, 32))
 
             # Not flattening image here, since the CNN will take in 32x32x3 images
@@ -67,14 +72,14 @@ def pre_process_images(data_directory):
 
     return features, labels
 
-def train_model(config):
-    X, y = pre_process_images('/home/josh/applied_ml/final/traffic_lights_large/data') 
+def train_model(config, input_shape=(32, 32, 3), num_classes=3):
+    
+    X, y = pre_process_images('/home/josh/applied_ml/final/traffic_light_images_shah/data') 
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
     # Make sure the config has the right keys
-    if isinstance(config['filters'], tune.search.sample.Categorical):
-        config['filters'] = config['filters'].sample(None)
+    filters = config['filters'].value if isinstance(config['filters'], tune.search.sample.Categorical) else config['filters']
         
     model = models.Sequential([
         
@@ -134,8 +139,9 @@ def train_model(config):
         callbacks=[early_stopping, WandbMetricsLogger()]
     )
     
-    # Report validation accuracy to ray Tune for hyperparameter optimization
-    tune.report(mean_accuracy=history.history['val_accuracy'][-1])
+    best_val_accuracy = max(history.history['val_accuracy'])
+    
+    ray.train.report({'accuracy': best_val_accuracy})
     
  
 def main():
@@ -157,8 +163,8 @@ def main():
         max_t=1000,  # max epochs
         grace_period=10,
         reduction_factor=2,
-        metric=metric,
-        mode=mode
+        # metric=metric,
+        # mode=mode
     )
     search_alg = OptunaSearch(metric=metric, mode=mode)
 
@@ -169,15 +175,17 @@ def main():
         scheduler=scheduler,
         search_alg=search_alg,
         num_samples=20,
-        resources_per_trial={'cpu':12, 'gpu':1}
+        metric='accuracy',
+        mode='max',
+        resources_per_trial={'cpu':18, 'gpu':1}
     )
 
     # Print best hyperparameters and results
     print(f'Best hyperparameters found: {analysis.best_config}')
-    print(f'Best val. accuracy: {analysis.best_result['mean_accuracy']}')
+    print(f'Best val. accuracy: {analysis.best_result['accuracy']}')
     
     # Load data for final model
-    X, y = pre_process_images('/home/josh/applied_ml/final/traffic_lights_large/data')
+    X, y = pre_process_images('/home/josh/applied_ml/final/traffic_light_images_shah/data')
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
@@ -230,7 +238,7 @@ def main():
     final_model.save('models/cnn_large_tuned.keras')
 
     # Predict on the test set
-    y_pred = np.argmax(model.predict(X_test), axis=1)
+    y_pred = np.argmax(final_model.predict(X_test), axis=1)
 
     confmat = confusion_matrix(y_test, y_pred)
 
@@ -238,8 +246,8 @@ def main():
     sns.heatmap(confmat, annot=True, fmt='d', cmap='Greens', xticklabels=np.unique(['red', 'yellow', 'green']), yticklabels=np.unique(['red', 'yellow', 'green']))
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
-    plt.title('CNN Confusion Matrix (large Dataset)')
-    plt.savefig('images/cnn_conf_mat_large_tuned.png', dpi=1000)
+    plt.title('CNN Confusion Matrix (Small Dataset, Tuned)')
+    plt.savefig('images/cnn_conf_mat_small_tuned.png', dpi=1000)
 
     labels = ['red', 'yellow', 'green']
     print(classification_report(y_pred=y_pred, y_true=y_test))
