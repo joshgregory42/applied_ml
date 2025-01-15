@@ -32,4 +32,4 @@ conda deactivate
 conda activate applied_ml
 
 
-python3 final_cnn_small_tune_v2.py
+python3 final_cnn_small_tune_v2_cluster.py
